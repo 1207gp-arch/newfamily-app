@@ -205,12 +205,12 @@ function HomePage({ members, setPage, setSelected, events }) {
       </div>
 
       {mainTab === "active" && (
-        <div style={{ display:"flex", gap:6, overflowX:"auto", marginBottom:14, paddingBottom:2, justifyContent:"center" }}>
+        <div style={{ display:"flex", gap:5, marginBottom:14 }}>
           {[["전체", active.length], ...WEEKS.filter(w => w !== "등반").map(w => [w, active.filter(m => m.week === w).length])].map(([label, count]) => (
-            <div key={label} style={{ display:"flex", flexDirection:"column", alignItems:"center", background: filterWeek===label?"#f0faf4":"#f8f8f8", borderRadius:10, padding:"8px 12px", minWidth:52, cursor:"pointer", border: filterWeek===label?"1.5px solid #4a7c59":"1.5px solid transparent" }}
+            <div key={label} style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", alignItems:"center", background: filterWeek===label?"#f0faf4":"#f8f8f8", borderRadius:10, padding:"8px 2px", cursor:"pointer", border: filterWeek===label?"1.5px solid #4a7c59":"1.5px solid transparent" }}
               onClick={() => setFilterWeek(filterWeek === label ? "전체" : label)}>
-              <b style={{ fontSize:18 }}>{count}</b>
-              <span style={{ fontSize:11, color:"#888", marginTop:2 }}>{label}</span>
+              <b style={{ fontSize:17 }}>{count}</b>
+              <span style={{ fontSize:10.5, color:"#888", marginTop:2, whiteSpace:"nowrap" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -1427,4 +1427,5 @@ const S = {
   toggleBtn:  { padding:"6px 12px", border:"1.5px solid #e8e8e8", borderRadius:8, background:"#f8f8f8", color:"#666", fontSize:13, cursor:"pointer", letterSpacing:-0.3 },
   toggleBtnOn:{ border:"1.5px solid #111", background:"#111", color:"#fff" },
 };
+
 
