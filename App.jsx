@@ -1416,3 +1416,4 @@ const S = {
   toggleBtn:  { padding:"6px 12px", border:"1.5px solid #e8e8e8", borderRadius:8, background:"#f8f8f8", color:"#666", fontSize:13, cursor:"pointer", letterSpacing:-0.3 },
   toggleBtnOn:{ border:"1.5px solid #111", background:"#111", color:"#fff" },
 };
+
