@@ -32,7 +32,15 @@ function getNextSunday() {
   const diff = day === 0 ? 0 : 7 - day;
   const sunday = new Date(today);
   sunday.setDate(today.getDate() + diff);
-  return sunday.toLocaleDateString("ko-KR");
+  const y = sunday.getFullYear();
+  const mo = String(sunday.getMonth() + 1).padStart(2, "0");
+  const d = String(sunday.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${d}`;
+}
+
+// Firebase 키에는 . # $ [ ] / 와 공백을 쓸 수 없어서 안전한 형태로 변환
+function dateKey(d) {
+  return String(d).replace(/[.#$/\[\]\s]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
 
 function nextWeekOf(m) {
@@ -706,9 +714,10 @@ function AttendPage({ members, saveMembers, onBack }) {
   const active = members.filter(m => m.week !== "등반" && !m.inactive);
 
   const setStatus = (id, status) => {
-    saveMembers(members.map(m => m.id === id ? { ...m, attendHistory: { ...(m.attendHistory||{}), [date]: status } } : m));
+    const k = dateKey(date);
+    saveMembers(members.map(m => m.id === id ? { ...m, attendHistory: { ...(m.attendHistory||{}), [k]: status } } : m));
   };
-  const getStatus = (m) => m.attendHistory?.[date] || "";
+  const getStatus = (m) => m.attendHistory?.[dateKey(date)] || "";
 
   const grouped = ATTEND_STATUS.reduce((acc, s) => { acc[s] = active.filter(m => getStatus(m) === s); return acc; }, {});
   const unset = active.filter(m => !getStatus(m));
