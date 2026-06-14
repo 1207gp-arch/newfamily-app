@@ -43,6 +43,24 @@ function dateKey(d) {
   return String(d).replace(/[.#$/\[\]\s]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
 
+// 사진을 긴 변 기준으로 줄이고 JPEG base64로 변환 (전송 용량·속도 최적화)
+function downscaleImage(dataUrl, maxEdge, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, maxEdge / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality).split(",")[1]);
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
 function nextWeekOf(m) {
   const idx = WEEKS.indexOf(m.week);
   return idx < WEEKS.length - 1 ? WEEKS[idx + 1] : "등반";
@@ -304,24 +322,22 @@ function RegisterPage({ onSubmit, onBack }) {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      const base64 = ev.target.result.split(",")[1];
       setPreview(ev.target.result);
       setScanning(true);
       setScanError("");
       try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
+        const base64 = await downscaleImage(ev.target.result, 1568, 0.8);
+        const res = await fetch("/api/scan", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "anthropic-dangerous-direct-browser-access": "true" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 1000,
-            messages: [{ role: "user", content: [
-              { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
-              { type: "text", text: "이 새가족 만남카드에서 정보를 추출해 JSON만 응답해. {\"name\":\"이름\",\"mbti\":\"MBTI\",\"phone\":\"전화번호\",\"birth\":\"생년월일\",\"gender\":\"남또는여\",\"address\":\"주소\",\"baptism\":\"받음또는안받음\",\"faithStatus\":\"처음이에요또는예전에다녔어요\",\"currentLife\":\"학생또는취업준비중또는직장인또는잠시쉬는중\",\"hobby\":\"취미\",\"todayFeel\":\"느낀점\",\"prayer\":\"기도제목\",\"visitReason\":\"방문이유\",\"referral\":\"추천인\",\"need\":\"위로또는친구또는신앙성장또는방향또는쉼\"} 없는항목은빈문자열." }
-            ]}]
+            image: base64,
+            media_type: "image/jpeg",
+            prompt: "이 새가족 만남카드에서 정보를 추출해 JSON만 응답해. {\"name\":\"이름\",\"mbti\":\"MBTI\",\"phone\":\"전화번호\",\"birth\":\"생년월일\",\"gender\":\"남또는여\",\"address\":\"주소\",\"baptism\":\"받음또는안받음\",\"faithStatus\":\"처음이에요또는예전에다녔어요\",\"currentLife\":\"학생또는취업준비중또는직장인또는잠시쉬는중\",\"hobby\":\"취미\",\"todayFeel\":\"느낀점\",\"prayer\":\"기도제목\",\"visitReason\":\"방문이유\",\"referral\":\"추천인\",\"need\":\"위로또는친구또는신앙성장또는방향또는쉼\"} 없는항목은빈문자열."
           })
         });
         const data = await res.json();
+        if (data.error || !data.content) throw new Error(data.error?.message || data.error || "응답 오류");
         const text = data.content?.[0]?.text || "";
         const clean = text.replace(/```json|```/g, "").trim();
         const parsed = JSON.parse(clean);
@@ -1040,7 +1056,13 @@ function DonkeyPage({ onBack }) {
       { name:"목사님과 한 컷", emoji:"📸" },
       { name:"찬양 챌린지", emoji:"🎤" },
       { name:"파친코 게임", emoji:"🎰" },
-    ]
+    ],
+    food: [
+      { name:"떡볶이", by:"예훈 발주" },
+      { name:"김치볶음밥", by:"예훈 발주" },
+      { name:"닭꼬치", by:"노브랜드" },
+      { name:"핫도그", by:"노브랜드" },
+    ],
   };
 
   return (
@@ -1068,7 +1090,26 @@ function DonkeyPage({ onBack }) {
             <p style={{ fontSize:14, color:"#4a7c59", margin:"0 0 4px", fontWeight:600 }}>{firstHalf.date}</p>
           </div>
 
+          {/* 게임 부스 */}
+          <p style={{ fontSize:13, fontWeight:700, color:"#333", margin:"0 0 8px" }}>🎪 게임 부스</p>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:20 }}>
+            {firstHalf.booths.map(b => (
+              <div key={b.name} style={{ display:"flex", alignItems:"center", gap:6, background:"#f8f8f8", borderRadius:10, padding:"8px 12px", fontSize:13, color:"#444", fontWeight:600 }}>
+                <span style={{ fontSize:16 }}>{b.emoji}</span>{b.name}
+              </div>
+            ))}
+          </div>
 
+          {/* 먹거리 */}
+          <p style={{ fontSize:13, fontWeight:700, color:"#333", margin:"0 0 8px" }}>🍢 먹거리</p>
+          <div style={{ marginBottom:20 }}>
+            {firstHalf.food.map(f => (
+              <div key={f.name} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", marginBottom:6, background:"#fafafa", borderRadius:10 }}>
+                <b style={{ fontSize:14, color:"#333", letterSpacing:-0.3 }}>{f.name}</b>
+                <span style={{ fontSize:12, fontWeight:600, padding:"3px 10px", borderRadius:10, background: f.by.includes("노브랜드")?"#fef3e2":"#e8f5e9", color: f.by.includes("노브랜드")?"#c2710c":"#2e7d32" }}>{f.by}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
