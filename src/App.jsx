@@ -345,7 +345,7 @@ function RegisterPage({ onSubmit, onBack }) {
         setStep("form");
       } catch (err) {
         console.error(err);
-        setScanError("인식에 실패했어요. 다시 시도하거나 직접 입력해주세요.");
+        setScanError("실패 원인: " + (err.message || String(err)));
       } finally {
         setScanning(false);
       }
